@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan Executor Dashboard</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+    <header>
+        <h1>Plan Executor Dashboard</h1>
+        <div class="controls">
+            <button id="run-default" class="button primary">Run Default Plan</button>
+            <div class="custom-control">
+                <input type="text" id="custom-prompt" placeholder="Enter custom prompt...">
+                <button id="run-custom" class="button">Run Custom Plan</button>
+            </div>
+        </div>
+    </header>
+    
+    <main>
+        <div class="container">
+            <div class="panel plan-panel">
+                <div class="panel-header">
+                    <h2>Current Plan</h2>
+                    <button id="toggle-fixes" class="toggle-button">Show Fix History</button>
+                </div>
+                <div id="plan-content" class="panel-content">
+                    <div class="placeholder">No active plan. Use the buttons above to start execution.</div>
+                </div>
+                <div id="fixes-content" class="panel-content fix-history hidden">
+                    <h3>Plan Fix History</h3>
+                    <div class="fix-logs">
+                        <div class="placeholder">No fix history available for this plan.</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel log-panel">
+                <div class="panel-header">
+                    <h2>Execution Log</h2>
+                </div>
+                <div id="log-content" class="panel-content">
+                    <div class="placeholder">Waiting for execution to start...</div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <footer>
+        <p>&copy; 2023 Plan Executor - A Spring Boot Application</p>
+    </footer>
+    
+    <script th:src="@{/js/app.js}"></script>
+</body>
+</html> 

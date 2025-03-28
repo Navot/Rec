@@ -1,0 +1,66 @@
+{
+  "topLevelTasks": [
+    {
+      "isAtomic": true,
+      "subTasks": [],
+      "id": 1,
+      "description": "Set up a virtual environment for the project to manage dependencies.",
+      "commands": [
+        "python -m venv venv",
+        "source venv/bin/activate"
+      ],
+      "successCriteria": "A \u0027venv\u0027 directory is created, and the command line indicates that the virtual environment is activated.",
+      "completed": true,
+      "inProgress": false
+    },
+    {
+      "isAtomic": true,
+      "subTasks": [],
+      "id": 2,
+      "description": "Install necessary Python packages using pip.",
+      "commands": [
+        "pip install flask",
+        "pip install flask-wtf"
+      ],
+      "successCriteria": "\u0027flask\u0027 and \u0027flask-wtf\u0027 are listed as installed when running \u0027pip list\u0027.",
+      "completed": false,
+      "inProgress": false
+    },
+    {
+      "isAtomic": true,
+      "subTasks": [],
+      "id": 3,
+      "description": "Create a basic Flask application with login functionality.",
+      "commands": [
+        "echo \"from flask import Flask, render_template, request\nimport os\n\napp \u003d Flask(__name__)\napp.config[\u0027SECRET_KEY\u0027] \u003d \u0027secretkey\u0027\n\ndef check_login(username, password):\n    return username \u003d\u003d \u0027admin\u0027 and password \u003d\u003d \u0027admin\u0027\n\n@app.route(\u0027/\u0027, methods\u003d[\u0027GET\u0027, \u0027POST\u0027])\ndef login():\n    if request.method \u003d\u003d \u0027POST\u0027:\n        username \u003d request.form[\u0027username\u0027]\n        password \u003d request.form[\u0027password\u0027]\n        if check_login(username, password):\n            return render_template(\u0027success.html\u0027)\n        else:\n            return \u0027Login Failed\u0027, 401\n    return render_template(\u0027login.html\u0027)\n\nif __name__ \u003d\u003d \u0027__main__\u0027:\n    app.run(port\u003d8081)\" \u003e app.py",
+        "echo \"\u003c!doctype html\u003e\n\u003chtml\u003e\n\u003chead\u003e\u003ctitle\u003eLogin\u003c/title\u003e\u003c/head\u003e\n\u003cbody\u003e\n\u003cform method\u003d\u0027POST\u0027\u003e\n  Username: \u003cinput type\u003d\u0027text\u0027 name\u003d\u0027username\u0027\u003e\u003cbr\u003e\n  Password: \u003cinput type\u003d\u0027password\u0027 name\u003d\u0027password\u0027\u003e\u003cbr\u003e\n  \u003cinput type\u003d\u0027submit\u0027 value\u003d\u0027Login\u0027\u003e\n\u003c/form\u003e\n\u003c/body\u003e\n\u003c/html\u003e\" \u003e templates/login.html",
+        "echo \"\u003c!doctype html\u003e\n\u003chtml\u003e\n\u003chead\u003e\u003ctitle\u003eSuccess\u003c/title\u003e\u003c/head\u003e\n\u003cbody\u003e\n\u003ch1\u003eLogin Successful!\u003c/h1\u003e\n\u003c/body\u003e\n\u003c/html\u003e\" \u003e templates/success.html"
+      ],
+      "successCriteria": "\u0027app.py\u0027, \u0027login.html\u0027, and \u0027success.html\u0027 are created with the specified content.",
+      "completed": false,
+      "inProgress": false
+    },
+    {
+      "isAtomic": true,
+      "subTasks": [],
+      "id": 4,
+      "description": "Run the Flask application to start the server on port 8081.",
+      "commands": [
+        "python app.py"
+      ],
+      "successCriteria": "The terminal shows that the server is running on http://127.0.0.1:8081/ and ready to accept connections.",
+      "completed": false,
+      "inProgress": false
+    },
+    {
+      "isAtomic": true,
+      "subTasks": [],
+      "id": 5,
+      "description": "Verify that the UI login works by accessing it in a web browser.",
+      "commands": [],
+      "successCriteria": "Navigating to http://127.0.0.1:8081/ displays the login form, and logging in with username \u0027admin\u0027 and password \u0027admin\u0027 redirects to the success page.",
+      "completed": false,
+      "inProgress": false
+    }
+  ]
+}

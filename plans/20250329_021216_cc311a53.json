@@ -1,0 +1,66 @@
+{
+  "topLevelTasks": [
+    {
+      "isAtomic": true,
+      "subTasks": [],
+      "id": 1,
+      "description": "Set up a virtual environment and install Flask",
+      "commands": [
+        "python3 -m venv myserverenv",
+        "source myserverenv/bin/activate",
+        "pip install flask"
+      ],
+      "successCriteria": "Flask is installed within the activated virtual environment.",
+      "completed": true,
+      "inProgress": false
+    },
+    {
+      "isAtomic": true,
+      "subTasks": [],
+      "id": 2,
+      "description": "Create a basic Flask application with login functionality",
+      "commands": [
+        "nano app.py"
+      ],
+      "successCriteria": "A file named \u0027app.py\u0027 is created containing the necessary code for the server and UI login.",
+      "completed": false,
+      "inProgress": false
+    },
+    {
+      "isAtomic": true,
+      "subTasks": [],
+      "id": 3,
+      "description": "Write Flask application code",
+      "commands": [
+        "# Enter the following code in app.py:\n\nfrom flask import Flask, render_template_string, request, redirect, url_for, session\n\napp \u003d Flask(__name__)\napp.secret_key \u003d \u0027your_secret_key\u0027\n\nDEFAULT_USERNAME \u003d \u0027admin\u0027\nDEFAULT_PASSWORD \u003d \u0027admin\u0027\n\nLOGIN_PAGE \u003d \u0027\u0027\u0027\n\u003c!doctype html\u003e\n\u003chtml\u003e\n\u003chead\u003e\u003ctitle\u003eLogin\u003c/title\u003e\u003c/head\u003e\n\u003cbody\u003e\n  \u003ch2\u003eLogin\u003c/h2\u003e\n  {% if error %}\u003cp style\u003d\u0027color:red;\u0027\u003e{{ error }}\u003c/p\u003e{% endif %}\n  \u003cform method\u003d\u0027post\u0027\u003e\n    Username: \u003cinput type\u003d\u0027text\u0027 name\u003d\u0027username\u0027\u003e\u003cbr\u003e\n    Password: \u003cinput type\u003d\u0027password\u0027 name\u003d\u0027password\u0027\u003e\u003cbr\u003e\n    \u003cinput type\u003d\u0027submit\u0027 value\u003d\u0027Login\u0027\u003e\n  \u003c/form\u003e\n\u003c/body\u003e\n\u003c/html\u003e\n\u0027\u0027\u0027\n\n@app.route(\u0027/\u0027, methods\u003d[\u0027GET\u0027, \u0027POST\u0027])\ndef login():\n    if request.method \u003d\u003d \u0027POST\u0027:\n        username \u003d request.form[\u0027username\u0027]\n        password \u003d request.form[\u0027password\u0027]\n        error \u003d None\n        if username !\u003d DEFAULT_USERNAME or password !\u003d DEFAULT_PASSWORD:\n            error \u003d \u0027Invalid credentials\u0027\n        else:\n            session[\u0027logged_in\u0027] \u003d True\n            return redirect(url_for(\u0027home\u0027))\n    return render_template_string(LOGIN_PAGE, error\u003derror)\n\n@app.route(\u0027/home\u0027)\ndef home():\n    if not session.get(\u0027logged_in\u0027):\n        return redirect(url_for(\u0027login\u0027))\n    return \u0027\u003ch1\u003eWelcome, Admin!\u003c/h1\u003e\u003ca href\u003d\"/logout\"\u003eLogout\u003c/a\u003e\u0027\n\n@app.route(\u0027/logout\u0027)\ndef logout():\n    session.pop(\u0027logged_in\u0027, None)\n    return redirect(url_for(\u0027login\u0027))\n\nif __name__ \u003d\u003d \u0027__main__\u0027:\n    app.run(port\u003d8081)"
+      ],
+      "successCriteria": "The \u0027app.py\u0027 file contains a complete Flask application code with login and home routes.",
+      "completed": false,
+      "inProgress": false
+    },
+    {
+      "isAtomic": true,
+      "subTasks": [],
+      "id": 4,
+      "description": "Run the Flask server",
+      "commands": [
+        "python app.py"
+      ],
+      "successCriteria": "The server is running on http://localhost:8081, with a login page available.",
+      "completed": false,
+      "inProgress": false
+    },
+    {
+      "isAtomic": true,
+      "subTasks": [],
+      "id": 5,
+      "description": "Test the login functionality",
+      "commands": [
+        "echo \u0027Visit http://localhost:8081 in your browser to test the login.\u0027"
+      ],
+      "successCriteria": "The user can access the UI, log in with \u0027admin\u0027 as both username and password, and see a welcome message.",
+      "completed": false,
+      "inProgress": false
+    }
+  ]
+}

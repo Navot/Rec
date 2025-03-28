@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan Executor Dashboard</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <header>
+        <h1>Plan Executor Dashboard</h1>
+        <div class="execution-controls">
+            <button id="run-default" class="btn primary">Run Default Plan</button>
+            <div class="custom-prompt">
+                <input type="text" id="custom-prompt" placeholder="Enter custom prompt...">
+                <button id="run-custom" class="btn">Run Custom Plan</button>
+            </div>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="panel plan-panel">
+            <h2>Current Plan</h2>
+            <div id="plan-container">
+                <pre id="plan-content">Loading plan...</pre>
+            </div>
+        </div>
+        <div class="panel log-panel">
+            <h2>Execution Log</h2>
+            <div id="log-container">
+                <pre id="log-content">Waiting for execution to start...</pre>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Plan Executor v1.0</p>
+    </footer>
+
+    <script src="js/app.js"></script>
+</body>
+</html> 

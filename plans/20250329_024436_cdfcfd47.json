@@ -1,0 +1,64 @@
+{
+  "topLevelTasks": [
+    {
+      "isAtomic": true,
+      "subTasks": [],
+      "id": 1,
+      "description": "Set up the environment and install necessary packages.",
+      "commands": [
+        "pip install flask"
+      ],
+      "successCriteria": "The package \u0027flask\u0027 should be installed, which can be verified by running \u0027pip show flask\u0027.",
+      "completed": true,
+      "inProgress": false
+    },
+    {
+      "isAtomic": true,
+      "subTasks": [],
+      "id": 2,
+      "description": "Create a Python script for the server with login functionality.",
+      "commands": [
+        "echo \"from flask import Flask, request, render_template_string\\n\\napp \u003d Flask(__name__)\\n\\nlogin_page \u003d \\\"\u003cform method\u003d\u0027POST\u0027\u003eUsername: \u003cinput type\u003d\u0027text\u0027 name\u003d\u0027username\u0027\u003e\u003cbr\u003ePassword: \u003cinput type\u003d\u0027password\u0027 name\u003d\u0027password\u0027\u003e\u003cbr\u003e\u003cinput type\u003d\u0027submit\u0027 value\u003d\u0027Login\u0027\u003e\u003c/form\u003e\\\"\\n\\ndef check_credentials(username, password):\\n    return username \u003d\u003d \u0027admin\u0027 and password \u003d\u003d \u0027admin\u0027\\n\\n@app.route(\u0027/\u0027, methods\u003d[\u0027GET\u0027, \u0027POST\u0027])\\ndef login():\\n    if request.method \u003d\u003d \u0027POST\u0027:\\n        username \u003d request.form[\u0027username\u0027]\\n        password \u003d request.form[\u0027password\u0027]\\n        if check_credentials(username, password):\\n            return \u0027\u003ch1\u003eLogin Successful!\u003c/h1\u003e\u0027\\n        else:\\n            return \u0027\u003ch1\u003eLogin Failed. Try again.\u003c/h1\u003e\u0027, 401\\n    return render_template_string(login_page)\\n\\nif __name__ \u003d\u003d \u0027__main__\u0027:\\n    app.run(port\u003d8081)\" \u003e server.py"
+      ],
+      "successCriteria": "The file \u0027server.py\u0027 should be created with the specified code.",
+      "completed": true,
+      "inProgress": false
+    },
+    {
+      "isAtomic": true,
+      "subTasks": [],
+      "id": 3,
+      "description": "Run the Python server on port 8081.",
+      "commands": [
+        "python server.py"
+      ],
+      "successCriteria": "The terminal should display a message indicating that the server is running on http://127.0.0.1:8081/.",
+      "completed": false,
+      "inProgress": true
+    },
+    {
+      "isAtomic": true,
+      "subTasks": [],
+      "id": 4,
+      "description": "Verify login functionality using default credentials.",
+      "commands": [
+        "curl -d \u0027username\u003dadmin\u0026password\u003dadmin\u0027 -X POST http://127.0.0.1:8081/"
+      ],
+      "successCriteria": "The server response should be \u0027\u003ch1\u003eLogin Successful!\u003c/h1\u003e\u0027.",
+      "completed": false,
+      "inProgress": false
+    },
+    {
+      "isAtomic": true,
+      "subTasks": [],
+      "id": 5,
+      "description": "Verify login failure with incorrect credentials.",
+      "commands": [
+        "curl -d \u0027username\u003dadmin\u0026password\u003dwrong\u0027 -X POST http://127.0.0.1:8081/"
+      ],
+      "successCriteria": "The server response should be \u0027\u003ch1\u003eLogin Failed. Try again.\u003c/h1\u003e\u0027.",
+      "completed": false,
+      "inProgress": false
+    }
+  ]
+}

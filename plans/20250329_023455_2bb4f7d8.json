@@ -1,0 +1,54 @@
+{
+  "topLevelTasks": [
+    {
+      "isAtomic": true,
+      "subTasks": [],
+      "id": 1,
+      "description": "Analyze the overall task to understand its requirements and break it down into smaller components.",
+      "commands": [],
+      "successCriteria": "A clear understanding of the task\u0027s objectives and components, ready for further breakdown.",
+      "completed": false,
+      "inProgress": false
+    },
+    {
+      "isAtomic": true,
+      "subTasks": [],
+      "id": 2,
+      "description": "Identify up to five key subtasks needed to complete the overall task.",
+      "commands": [],
+      "successCriteria": "A list of up to five clearly defined subtasks is created, each with a specific goal that contributes to completing the overall task.",
+      "completed": false,
+      "inProgress": false
+    },
+    {
+      "isAtomic": true,
+      "subTasks": [],
+      "id": 3,
+      "description": "For each subtask, define what needs to be done in detail.",
+      "commands": [],
+      "successCriteria": "Each subtask has a detailed description explaining its purpose and how it contributes to the overall task.",
+      "completed": false,
+      "inProgress": false
+    },
+    {
+      "isAtomic": true,
+      "subTasks": [],
+      "id": 4,
+      "description": "List any terminal commands that need to be run for each subtask.",
+      "commands": [],
+      "successCriteria": "Each subtask has a list of necessary terminal commands provided, if applicable, to execute the task.",
+      "completed": false,
+      "inProgress": false
+    },
+    {
+      "isAtomic": true,
+      "subTasks": [],
+      "id": 5,
+      "description": "Define success criteria for each subtask to ensure completion can be verified.",
+      "commands": [],
+      "successCriteria": "Each subtask includes clear success criteria that allow verification of its completion.",
+      "completed": false,
+      "inProgress": false
+    }
+  ]
+}

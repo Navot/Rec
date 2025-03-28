@@ -134,30 +134,112 @@ public class OllamaClient {
         String responseText = queryOllama(systemPrompt, userPrompt);
         String responseTextClean = extracted(responseText);
 
+        if (responseTextClean == null) {
+            // If extraction failed, try to find JSON anywhere in the response
+            responseTextClean = extractAnyJson(responseText);
+            if (responseTextClean == null) {
+                System.out.println("No valid JSON found in response. Original response:\n" + responseText);
+                responseTextClean = "{}";  // Provide an empty object to avoid NPE
+            }
+        }
 
         JsonObject jsonResponse;
 
         try {
             jsonResponse = JsonParser.parseString(responseTextClean).getAsJsonObject();
         } catch(Exception e) {
+            System.out.println("Failed to parse response as JSON: " + e.getMessage());
+            System.out.println("Original response text: " + responseText);
+            System.out.println("Cleaned response text: " + responseTextClean);
             // If the response isn't valid JSON, ask the agent to fix it.
-            return fixJsonResponse(systemPrompt, expectedSchema);
+            jsonResponse = fixJsonResponse(systemPrompt, expectedSchema);
         }
 
-        // Loop until the JSON matches the expected schema.
-        while (!matchesSchema(jsonResponse, expectedSchema)) {
-            // Construct a prompt asking the agent to adjust the JSON to match the expected schema.
-            String fixPrompt = "The response does not match the expected JSON schema: "
-                    + expectedSchema.toString() + ". Please reformat your response to exactly follow this schema.";
-            String fixedResponseText = queryOllama(systemPrompt, fixPrompt);
-            String fixedResponseTextClean = extracted(fixedResponseText);
-            try {
-                jsonResponse = JsonParser.parseString(fixedResponseTextClean).getAsJsonObject();
-            } catch(Exception e) {
-                // If the new response is still not valid JSON, continue the loop.
-                continue;
+        // Check for task planning specific needs (subtasks array)
+        if (expectedSchema.has("subtasks") && !jsonResponse.has("subtasks")) {
+            System.out.println("Response is missing required 'subtasks' array. Attempting to fix...");
+            
+            // Look for arrays that might contain tasks
+            for (String key : jsonResponse.keySet()) {
+                if (jsonResponse.get(key).isJsonArray()) {
+                    JsonArray array = jsonResponse.getAsJsonArray(key);
+                    if (array.size() > 0 && array.get(0).isJsonObject()) {
+                        // Check if the first element looks like a task
+                        JsonObject firstItem = array.get(0).getAsJsonObject();
+                        if (firstItem.has("description") || firstItem.has("id")) {
+                            System.out.println("Found potential tasks array in key: " + key);
+                            jsonResponse.add("subtasks", array);
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // If we still don't have subtasks, try to extract from the raw response
+            if (!jsonResponse.has("subtasks")) {
+                JsonArray subtasks = extractTasksFromText(responseText);
+                if (subtasks != null && subtasks.size() > 0) {
+                    jsonResponse.add("subtasks", subtasks);
+                    System.out.println("Extracted " + subtasks.size() + " tasks from raw text");
+                } else {
+                    // Create a minimal valid response with empty subtasks array
+                    JsonArray emptySubtasks = new JsonArray();
+                    jsonResponse.add("subtasks", emptySubtasks);
+                    System.out.println("Created empty subtasks array as fallback");
+                }
             }
         }
+
+        // Handle commands schema requirements
+        if (expectedSchema.has("commands") && !jsonResponse.has("commands")) {
+            // Make sure the response has a commands property
+            // Look for arrays that might contain commands
+            for (String key : jsonResponse.keySet()) {
+                if (jsonResponse.get(key).isJsonArray()) {
+                    // Found an array, check if it contains strings that look like commands
+                    JsonArray array = jsonResponse.getAsJsonArray(key);
+                    boolean looksLikeCommands = true;
+                    
+                    for (JsonElement element : array) {
+                        if (!element.isJsonPrimitive() || !element.getAsString().contains("(")) {
+                            looksLikeCommands = false;
+                            break;
+                        }
+                    }
+                    
+                    if (looksLikeCommands) {
+                        // Create a new object with the commands array
+                        jsonResponse.add("commands", array);
+                        System.out.println("Found commands array in key: " + key);
+                        break;
+                    }
+                }
+            }
+            
+            // If we haven't found a commands array, create a wrapper
+            if (!jsonResponse.has("commands")) {
+                JsonArray commandsArray = new JsonArray();
+                jsonResponse.add("commands", commandsArray);
+                System.out.println("Creating empty commands wrapper");
+            }
+        }
+
+        // If we have a commands property, make sure it's an array
+        if (jsonResponse.has("commands") && !jsonResponse.get("commands").isJsonArray()) {
+            String commandStr = jsonResponse.get("commands").getAsString();
+            JsonArray commandsArray = new JsonArray();
+            
+            // Check if it's a single command string
+            if (commandStr.contains("(") && commandStr.contains(")")) {
+                commandsArray.add(commandStr);
+                jsonResponse.add("commands", commandsArray);
+                System.out.println("Converting single command string to array");
+            } else {
+                // Replace with empty array
+                jsonResponse.add("commands", new JsonArray());
+            }
+        }
+
         return jsonResponse;
     }
 
@@ -175,6 +257,31 @@ public class OllamaClient {
         } else {
             System.out.println("No JSON code block found in the input text.");
         }
+        return null;
+    }
+
+    /**
+     * Extract any JSON object from the text
+     */
+    private static String extractAnyJson(String rawText) {
+        // Try to extract any JSON object from { to matching }
+        Pattern pattern = Pattern.compile("\\{.*?\\}", Pattern.DOTALL);
+        Matcher matcher = pattern.matcher(rawText);
+        
+        if (matcher.find()) {
+            String jsonText = matcher.group(0);
+            System.out.println("Extracted potential JSON:");
+            System.out.println(jsonText);
+            
+            // Verify it's valid JSON
+            try {
+                JsonParser.parseString(jsonText);
+                return jsonText;
+            } catch (Exception e) {
+                System.out.println("Extracted text is not valid JSON: " + e.getMessage());
+            }
+        }
+        
         return null;
     }
 
@@ -199,6 +306,62 @@ public class OllamaClient {
         }
         
         return JsonParser.parseString(fixedResponseTextClean).getAsJsonObject();
+    }
+
+    /**
+     * Try to extract task information from raw text when JSON parsing fails
+     */
+    private static JsonArray extractTasksFromText(String rawText) {
+        JsonArray tasks = new JsonArray();
+        
+        // Split the text by lines or other delimiters that might indicate tasks
+        String[] lines = rawText.split("\n");
+        
+        int taskId = 1;
+        StringBuilder currentTask = new StringBuilder();
+        boolean inTask = false;
+        
+        for (String line : lines) {
+            line = line.trim();
+            
+            // Look for patterns like "Task 1:", "Step 1:", "1. ", etc.
+            if (line.matches("^(Task|Step|\\d+\\.?)\\s+.*")) {
+                // If we were already building a task, save the previous one
+                if (inTask && currentTask.length() > 0) {
+                    JsonObject task = new JsonObject();
+                    task.addProperty("id", taskId++);
+                    task.addProperty("description", currentTask.toString().trim());
+                    task.addProperty("isAtomic", true);
+                    JsonArray commands = new JsonArray();
+                    commands.add("echo 'Executing: " + currentTask.toString().trim().replace("'", "\\'") + "'");
+                    task.add("commands", commands);
+                    tasks.add(task);
+                    
+                    currentTask = new StringBuilder();
+                }
+                
+                inTask = true;
+                currentTask.append(line.replaceFirst("^(Task|Step|\\d+\\.?)\\s+", ""));
+            } 
+            // Continue building the current task description
+            else if (inTask) {
+                currentTask.append(" ").append(line);
+            }
+        }
+        
+        // Don't forget the last task
+        if (inTask && currentTask.length() > 0) {
+            JsonObject task = new JsonObject();
+            task.addProperty("id", taskId);
+            task.addProperty("description", currentTask.toString().trim());
+            task.addProperty("isAtomic", true);
+            JsonArray commands = new JsonArray();
+            commands.add("echo 'Executing: " + currentTask.toString().trim().replace("'", "\\'") + "'");
+            task.add("commands", commands);
+            tasks.add(task);
+        }
+        
+        return tasks;
     }
 
     // For testing purposes

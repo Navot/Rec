@@ -11,6 +11,7 @@ public class Task {
     private List<String>  commands;
     private String successCriteria;
     private boolean completed = false;
+    private boolean inProgress = false;
 
 
     public Task(boolean isAtomic, int id, String description, List<String>  commands, String successCriteria) {
@@ -20,6 +21,7 @@ public class Task {
         this.commands = commands;
         this.successCriteria = successCriteria;
         this.completed = false;
+        this.inProgress = false;
     }
 
     public int getId() { return id; }
@@ -41,6 +43,8 @@ public class Task {
     public boolean isCompleted() { return completed; }
     public void setCompleted(boolean completed) { this.completed = completed; }
 
+    public boolean isInProgress() { return inProgress; }
+    public void setInProgress(boolean inProgress) { this.inProgress = inProgress; }
 
     public void addSubTask(Task subTask) {
         subTasks.add(subTask);
