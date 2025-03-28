@@ -1,0 +1,9 @@
+{
+    "commands": [
+        "getTask(2).change(\"description\", \"Update the HTML file creation command to include a meta viewport.\");",
+        "getTask(3).appendCommand(\"echo 'background-color: #fff;' >> style.css\");",
+        "removeTask(4);",
+        "addTask({\n  id: 6,\n  description: \"Set up a custom 404 page\",\n  commands: [\"touch 404.html\", \"echo '<h1>Page Not Found</h1>' > 404.html\"],\n  successCriteria: \"'404.html' exists and displays a custom message when accessed.\",\n  isAtomic: true\n});",
+        "updateTask(5, {\n  commands: [\"python3 -m http.server 8080\"],\n  successCriteria: \"Server starts and is accessible at 'http://localhost:8080/index.html'.\"\n})"
+    ]
+}

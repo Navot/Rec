@@ -1,0 +1,33 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Launch PlanExecutor",
+            "request": "launch",
+            "mainClass": "pkg.PlanExecutor",
+            "projectName": "Rec",
+            "classPaths": [
+                "/Users/navotdako/Dev/Rec/build/classes/java/main",
+                "/Users/navotdako/.gradle/caches/modules-2/files-2.1/com.google.code.gson/gson/2.10.1/b3add478d4382b78ea20b1671390a858002feb6c/gson-2.10.1.jar"
+            ],
+            "sourcePaths": [
+                "${workspaceFolder}/src/main/java"
+            ]
+        },
+        {
+            "type": "java",
+            "name": "Launch OllamaClient",
+            "request": "launch",
+            "mainClass": "pkg.OllamaClient",
+            "projectName": "Rec",
+            "classPaths": [
+                "/Users/navotdako/Dev/Rec/build/classes/java/main",
+                "/Users/navotdako/.gradle/caches/modules-2/files-2.1/com.google.code.gson/gson/2.10.1/b3add478d4382b78ea20b1671390a858002feb6c/gson-2.10.1.jar"
+            ],
+            "sourcePaths": [
+                "${workspaceFolder}/src/main/java"
+            ]
+        }
+    ]
+} 
