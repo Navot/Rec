@@ -25,10 +25,24 @@
                 <pre id="plan-content">Loading plan...</pre>
             </div>
         </div>
-        <div class="panel log-panel">
-            <h2>Execution Log</h2>
-            <div id="log-container">
-                <pre id="log-content">Waiting for execution to start...</pre>
+        <div class="panel logs-panel">
+            <div class="tabs">
+                <button class="tab-button active" data-tab="conversation">LLM Conversation</button>
+                <button class="tab-button" data-tab="system">System Logs</button>
+            </div>
+            <div class="log-panels">
+                <div id="conversation-panel" class="log-panel active">
+                    <h2>LLM Conversation</h2>
+                    <div id="conversation-container" class="log-container">
+                        <pre id="conversation-content" class="log-content">Waiting for LLM conversation...</pre>
+                    </div>
+                </div>
+                <div id="system-panel" class="log-panel">
+                    <h2>System Logs</h2>
+                    <div id="system-container" class="log-container">
+                        <pre id="system-content" class="log-content">Waiting for system logs...</pre>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

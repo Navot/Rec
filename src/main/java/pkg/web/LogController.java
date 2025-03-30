@@ -38,4 +38,28 @@ public class LogController {
     public List<LogEntry> getPlanFixLogs() {
         return fixLogFilter.filterFixLogs(logService.getAllLogs());
     }
+
+    /**
+     * Get only conversation logs (LLM requests and responses)
+     */
+    @GetMapping("/conversation")
+    public List<LogEntry> getConversationLogs(@RequestParam(required = false, defaultValue = "0") Long since) {
+        if (since == 0) {
+            return logService.getConversationLogs();
+        } else {
+            return logService.getConversationLogsSince(since);
+        }
+    }
+
+    /**
+     * Get only system logs (excluding LLM conversation logs)
+     */
+    @GetMapping("/system")
+    public List<LogEntry> getSystemLogs(@RequestParam(required = false, defaultValue = "0") Long since) {
+        if (since == 0) {
+            return logService.getSystemLogs();
+        } else {
+            return logService.getSystemLogsSince(since);
+        }
+    }
 } 

@@ -1,16 +1,25 @@
 package pkg;
 
 import com.google.gson.*;
+import pkg.web.LogService;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class OllamaClient {
+
+    private static LogService logService;
+
+    // Setter for the logService (to be injected)
+    public static void setLogService(LogService service) {
+        logService = service;
+    }
 
     // Your original query function.
     static String queryOllama(String systemPrompt, String userPrompt) throws Exception {
@@ -40,10 +49,13 @@ public class OllamaClient {
         requestBody.add("messages", messages);
         requestBody.addProperty("stream", false); // Set to true if streaming responses are desired
 
-        // Optionally print the request (or remove later)
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-
-        System.out.println(gson.toJson(messages));
+        // Log user prompt
+        String userPromptMessage = messages.get(1).getAsJsonObject().get("content").getAsString();
+        if (logService != null) {
+            logService.addLlmRequest("USER PROMPT: " + userPromptMessage);
+        } else {
+            System.out.println("USER PROMPT: " + userPromptMessage);
+        }
 
         try (OutputStream os = connection.getOutputStream()) {
             byte[] input = requestBody.toString().getBytes("utf-8");
@@ -64,10 +76,18 @@ public class OllamaClient {
         in.close();
 
         JsonObject jsonResponse = JsonParser.parseString(response.toString()).getAsJsonObject();
-        System.out.println(gson.toJson(jsonResponse));
 
         JsonObject message = jsonResponse.getAsJsonObject("message");
-        return message.get("content").getAsString();
+        String assistantResponse = message.get("content").getAsString();
+        
+        // Log assistant response
+        if (logService != null) {
+            logService.addLlmResponse("ASSISTANT RESPONSE: " + assistantResponse);
+        } else {
+            System.out.println("ASSISTANT PROMPT: " + assistantResponse);
+        }
+        
+        return assistantResponse;
     }
 
     /**
@@ -243,6 +263,23 @@ public class OllamaClient {
         return jsonResponse;
     }
 
+    /**
+     * Print to original console output without timestamps
+     */
+    private static void printRawToConsole(String message) {
+        try {
+            // Try to get the ConsoleRedirector instance
+            pkg.web.ConsoleRedirector redirector = pkg.web.ConsoleRedirector.getInstance();
+            if (redirector != null && redirector.originalOut != null) {
+                redirector.originalOut.println(message);
+                return;
+            }
+        } catch (Exception e) {
+            // Fall back to normal System.out if we can't get the original
+            System.out.println("(Unable to print without timestamps) " + message);
+        }
+    }
+
     private static String extracted(String rawText) {
         Pattern pattern = Pattern.compile("```json\\s*(\\{.*?\\})\\s*```", Pattern.DOTALL);
         Matcher matcher = pattern.matcher(rawText);
@@ -251,11 +288,68 @@ public class OllamaClient {
             // Extract the JSON string (group 1)
             String jsonText = matcher.group(1);
             System.out.println("Extracted JSON:");
-            System.out.println(jsonText);
+            
+            // Format and print JSON without timestamps
+            try {
+                JsonObject jsonObject = JsonParser.parseString(jsonText).getAsJsonObject();
+                Gson gson = new GsonBuilder().setPrettyPrinting().create();
+                String prettyJson = gson.toJson(jsonObject);
+                
+                // Try to get the LogService instance from Spring context
+                try {
+                    pkg.web.LogService logService = getLogService();
+                    if (logService != null) {
+                        // Use the special method to log JSON without timestamps
+                        logService.addRawJson(prettyJson);
+                    } else {
+                        // Fall back to direct printing
+                        printRawToConsole("\n--- JSON OUTPUT START ---\n" + prettyJson + "\n--- JSON OUTPUT END ---\n");
+                    }
+                } catch (Exception e) {
+                    // Fall back to direct printing
+                    printRawToConsole("\n--- JSON OUTPUT START ---\n" + prettyJson + "\n--- JSON OUTPUT END ---\n");
+                }
+            } catch (Exception e) {
+                // If JSON parsing fails, print the raw text
+                System.out.println(jsonText);
+            }
 
             return jsonText;
         } else {
             System.out.println("No JSON code block found in the input text.");
+        }
+        return null;
+    }
+
+    /**
+     * Get the LogService instance if available
+     */
+    private static pkg.web.LogService getLogService() {
+        try {
+            // Try to get LogService from PlanExecutor
+            Class<?> executorClass = Class.forName("pkg.PlanExecutor");
+            for (java.lang.reflect.Field field : executorClass.getDeclaredFields()) {
+                if (field.getType().getName().equals("pkg.web.LogService")) {
+                    field.setAccessible(true);
+                    Object instance = null;
+                    
+                    // Try to get a PlanExecutor instance from Spring
+                    if (Class.forName("pkg.PlanExecutorApplication") != null) {
+                        Object context = Class.forName("pkg.PlanExecutorApplication")
+                            .getDeclaredMethod("getApplicationContext").invoke(null);
+                        if (context != null) {
+                            instance = context.getClass().getMethod("getBean", Class.class)
+                                .invoke(context, executorClass);
+                        }
+                    }
+                    
+                    if (instance != null) {
+                        return (pkg.web.LogService) field.get(instance);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // Ignore any errors
         }
         return null;
     }
@@ -271,13 +365,32 @@ public class OllamaClient {
         if (matcher.find()) {
             String jsonText = matcher.group(0);
             System.out.println("Extracted potential JSON:");
-            System.out.println(jsonText);
             
-            // Verify it's valid JSON
+            // Format and print as a single block to avoid timestamps on each line
             try {
-                JsonParser.parseString(jsonText);
+                JsonObject jsonObject = JsonParser.parseString(jsonText).getAsJsonObject();
+                Gson gson = new GsonBuilder().setPrettyPrinting().create();
+                String prettyJson = gson.toJson(jsonObject);
+                
+                // Try to get the LogService instance from Spring context
+                try {
+                    pkg.web.LogService logService = getLogService();
+                    if (logService != null) {
+                        // Use the special method to log JSON without timestamps
+                        logService.addRawJson(prettyJson);
+                    } else {
+                        // Fall back to direct printing
+                        printRawToConsole("\n--- JSON OUTPUT START ---\n" + prettyJson + "\n--- JSON OUTPUT END ---\n");
+                    }
+                } catch (Exception e) {
+                    // Fall back to direct printing
+                    printRawToConsole("\n--- JSON OUTPUT START ---\n" + prettyJson + "\n--- JSON OUTPUT END ---\n");
+                }
+                
                 return jsonText;
             } catch (Exception e) {
+                // If JSON parsing fails, print the raw text
+                System.out.println(jsonText);
                 System.out.println("Extracted text is not valid JSON: " + e.getMessage());
             }
         }

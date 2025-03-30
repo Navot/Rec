@@ -34,6 +34,9 @@ public class PlanExecutor {
     public PlanExecutor(LogService logService, PlanService planService) {
         this.logService = logService;
         this.planService = planService;
+        
+        // Inject LogService into OllamaClient
+        OllamaClient.setLogService(logService);
     }
 
     public void executeWithDefaultPrompt() {

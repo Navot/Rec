@@ -4,18 +4,22 @@
  */
 
 // App state
-let lastLogId = 0;
+let lastSystemLogId = 0;
+let lastConversationLogId = 0;
 let currentPlanId = null;
 let isExecuting = false;
 
 // DOM elements
 const planContent = document.getElementById('plan-content');
-const logContent = document.getElementById('log-content');
+const systemContent = document.getElementById('system-content');
+const conversationContent = document.getElementById('conversation-content');
 const runDefaultButton = document.getElementById('run-default');
 const runCustomButton = document.getElementById('run-custom');
 const customPromptInput = document.getElementById('custom-prompt');
 const fixesContent = document.getElementById('fixes-content');
 const toggleFixesButton = document.getElementById('toggle-fixes');
+const tabButtons = document.querySelectorAll('.tab-button');
+const logPanels = document.querySelectorAll('.log-panel');
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
@@ -29,7 +33,8 @@ function initializeApp() {
     // Poll for updates
     setInterval(() => {
         fetchCurrentPlanId();
-        fetchNewLogEntries();
+        fetchNewSystemLogs();
+        fetchNewConversationLogs();
     }, 1000); // Poll every second
     
     // Set up button event listeners
@@ -41,6 +46,20 @@ function initializeApp() {
         if (event.key === 'Enter') {
             executeCustomPlan();
         }
+    });
+    
+    // Setup tab switching
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            // Remove active class from all buttons and panels
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            logPanels.forEach(panel => panel.classList.remove('active'));
+            
+            // Add active class to clicked button and corresponding panel
+            button.classList.add('active');
+            const tabName = button.getAttribute('data-tab');
+            document.getElementById(`${tabName}-panel`).classList.add('active');
+        });
     });
     
     // Setup task click handlers (for expanding/collapsing)
@@ -56,7 +75,9 @@ function initializeApp() {
     });
     
     // Setup toggle button for fix history
-    toggleFixesButton.addEventListener('click', toggleFixHistory);
+    if (toggleFixesButton) {
+        toggleFixesButton.addEventListener('click', toggleFixHistory);
+    }
 }
 
 /**
@@ -131,11 +152,13 @@ function executeCustomPlan() {
 }
 
 /**
- * Clear the log display
+ * Clear the log displays
  */
 function clearLog() {
-    logContent.innerHTML = 'Starting execution...';
-    lastLogId = 0;
+    systemContent.innerHTML = 'Starting execution...';
+    conversationContent.innerHTML = 'Waiting for LLM conversation...';
+    lastSystemLogId = 0;
+    lastConversationLogId = 0;
 }
 
 /**
@@ -213,7 +236,8 @@ function fetchCurrentPlan() {
  */
 function checkExecutionStatus() {
     // If we've received logs that indicate completion, update execution state
-    if (logContent.textContent.includes('Plan execution completed successfully')) {
+    if (systemContent.textContent.includes('Plan execution completed successfully') ||
+        conversationContent.textContent.includes('Plan execution completed successfully')) {
         isExecuting = false;
         updateButtonState();
     }
@@ -332,20 +356,20 @@ function getTaskStatusClass(task) {
 }
 
 /**
- * Fetch new log entries since the last check
+ * Fetch new system log entries since the last check
  */
-function fetchNewLogEntries() {
-    fetch(`/api/logs?since=${lastLogId}`)
+function fetchNewSystemLogs() {
+    fetch(`/api/logs/system?since=${lastSystemLogId}`)
         .then(response => {
             if (!response.ok) {
-                throw new Error('Failed to fetch log entries');
+                throw new Error('Failed to fetch system log entries');
             }
             return response.json();
         })
         .then(entries => {
             if (entries.length > 0) {
-                appendLogEntries(entries);
-                lastLogId = entries[entries.length - 1].id;
+                appendSystemLogEntries(entries);
+                lastSystemLogId = entries[entries.length - 1].id;
                 
                 // Check for execution status changes
                 if (entries.some(entry => entry.message.includes('Plan execution completed successfully'))) {
@@ -355,29 +379,71 @@ function fetchNewLogEntries() {
             }
         })
         .catch(error => {
-            console.error('Error fetching logs:', error);
+            console.error('Error fetching system logs:', error);
         });
 }
 
 /**
- * Append new log entries to the log display
+ * Fetch new conversation log entries since the last check
  */
-function appendLogEntries(entries) {
+function fetchNewConversationLogs() {
+    fetch(`/api/logs/conversation?since=${lastConversationLogId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch conversation log entries');
+            }
+            return response.json();
+        })
+        .then(entries => {
+            if (entries.length > 0) {
+                appendConversationLogEntries(entries);
+                lastConversationLogId = entries[entries.length - 1].id;
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching conversation logs:', error);
+        });
+}
+
+/**
+ * Append new system log entries to the system log display
+ */
+function appendSystemLogEntries(entries) {
     // If this is the first set of entries, clear the "waiting" message
-    if (logContent.textContent === 'Waiting for execution to start...' || 
-        logContent.textContent === 'Starting execution...') {
-        logContent.innerHTML = '';
+    if (systemContent.textContent === 'Waiting for system logs...' || 
+        systemContent.textContent === 'Starting execution...') {
+        systemContent.innerHTML = '';
     }
     
     entries.forEach(entry => {
         const logEntry = document.createElement('div');
         logEntry.className = `log-entry ${getLogEntryClass(entry)}`;
         logEntry.textContent = formatLogEntry(entry);
-        logContent.appendChild(logEntry);
+        systemContent.appendChild(logEntry);
     });
     
     // Scroll to bottom
-    logContent.scrollTop = logContent.scrollHeight;
+    systemContent.scrollTop = systemContent.scrollHeight;
+}
+
+/**
+ * Append new conversation log entries to the conversation log display
+ */
+function appendConversationLogEntries(entries) {
+    // If this is the first set of entries, clear the "waiting" message
+    if (conversationContent.textContent === 'Waiting for LLM conversation...') {
+        conversationContent.innerHTML = '';
+    }
+    
+    entries.forEach(entry => {
+        const logEntry = document.createElement('div');
+        logEntry.className = `log-entry ${getLogEntryClass(entry)}`;
+        logEntry.textContent = formatLogEntry(entry);
+        conversationContent.appendChild(logEntry);
+    });
+    
+    // Scroll to bottom
+    conversationContent.scrollTop = conversationContent.scrollHeight;
 }
 
 /**
@@ -399,16 +465,23 @@ function formatLogEntry(entry) {
  * Get the appropriate CSS class for a log entry based on content
  */
 function getLogEntryClass(entry) {
-    const message = entry.message.toLowerCase();
-    
-    if (message.includes('error') || message.includes('failed') || message.includes('exception')) {
-        return 'log-error';
-    } else if (message.includes('success') || message.includes('completed')) {
-        return 'log-success';
-    } else if (message.startsWith('executing command:')) {
-        return 'log-command';
-    } else {
-        return 'log-info';
+    switch (entry.level) {
+        case 'INFO':
+            return 'log-info';
+        case 'ERROR':
+            return 'log-error';
+        case 'SUCCESS':
+            return 'log-success';
+        case 'COMMAND':
+            return 'log-command';
+        case 'WARNING':
+            return 'log-warning';
+        case 'LLM_REQUEST':
+            return 'log-llm-request';
+        case 'LLM_RESPONSE':
+            return 'log-llm-response';
+        default:
+            return '';
     }
 }
 

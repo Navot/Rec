@@ -12,7 +12,7 @@ public class LogEntry {
     private LogLevel level;
 
     public enum LogLevel {
-        INFO, WARNING, ERROR, SUCCESS, COMMAND
+        INFO, WARNING, ERROR, SUCCESS, COMMAND, LLM_REQUEST, LLM_RESPONSE
     }
     
     public LogEntry() {
