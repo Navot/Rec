@@ -173,6 +173,9 @@ pre {
     padding: 3px 6px;
     border-radius: 4px;
     font-size: 13px;
+    white-space: nowrap !important;
+    overflow: visible;
+    display: block;
 }
 
 .log-info {
@@ -258,4 +261,20 @@ footer {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 10px;
+}
+
+#log-content {
+    overflow-x: scroll;
+    overflow-y: auto;
+    white-space: nowrap;
+    width: 100%;
+}
+
+.panel-content {
+    overflow-x: auto;
+    overflow-y: auto;
+}
+
+.log-panel {
+    overflow: hidden;
 } 

@@ -385,7 +385,14 @@ function appendLogEntries(entries) {
  */
 function formatLogEntry(entry) {
     const timestamp = new Date(entry.timestamp).toLocaleTimeString();
-    return `[${timestamp}] ${entry.message}`;
+    
+    // Remove Spring Boot timestamp and thread information from the message if present
+    let message = entry.message;
+    
+    // Match and remove patterns like "2025-03-30 21:31:44.713 INFO 29506 --- [ main]"
+    message = message.replace(/\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\.\d{3}\s+\w+\s+\d+\s+---\s+\[\s*[^\]]+\]\s+/, '');
+    
+    return `[${timestamp}] ${message}`;
 }
 
 /**
