@@ -132,8 +132,14 @@ public class PlanEditor {
             
             try {
                 if (command.startsWith("getTask(")) {
+                    // Parse the task ID part
                     int openParen = command.indexOf("(");
-                    int closeParen = command.indexOf(")", openParen);
+                    int closeParen = findMatchingClosingParenthesis(command, openParen);
+                    if (closeParen == -1) {
+                        System.out.println("  - ERROR: Cannot find matching closing parenthesis for task ID in: " + command);
+                        continue;
+                    }
+                    
                     String idStr = command.substring(openParen + 1, closeParen).trim();
                     int id = Integer.parseInt(idStr);
                     String remainder = command.substring(closeParen + 1).trim();
@@ -145,33 +151,52 @@ public class PlanEditor {
                     }
 
                     if (remainder.startsWith(".change(")) {
-                        int start = remainder.indexOf("(") + 1;
-                        int end = remainder.lastIndexOf(");");
-                        String params = remainder.substring(start, end);
-                        String[] parts = params.split(",\\s*", 2); // Split only at the first comma
-                        if (parts.length == 2) {
-                            String property = removeQuotes(parts[0]);
-                            String value = parts[1].trim();
-                            System.out.println("  - Changing property '" + property + "' of task " + id + " to: " + value);
-                            
-                            try {
-                                // Try to parse as JSON first
-                                JsonElement jsonValue = JsonParser.parseString(value);
-                                task.change(property, jsonValue);
-                                System.out.println("  - Applied JSON change to property: " + property);
-                            } catch (JsonSyntaxException e) {
-                                // If not valid JSON, use as string
-                                String stringValue = removeQuotes(value);
-                                task.change(property, stringValue);
-                                System.out.println("  - Applied string change to property: " + property);
-                            }
-                        } else {
-                            System.out.println("  - ERROR: Invalid parameter format for change(): " + params);
+                        int methodOpenParen = remainder.indexOf("(");
+                        int methodCloseParen = findMatchingClosingParenthesis(remainder, methodOpenParen);
+                        
+                        if (methodCloseParen == -1) {
+                            System.out.println("  - ERROR: Cannot find matching closing parenthesis for change method in: " + remainder);
+                            continue;
+                        }
+                        
+                        String params = remainder.substring(methodOpenParen + 1, methodCloseParen);
+                        
+                        // Find the comma that separates property name from value
+                        int commaPos = findPropertyValueSeparator(params);
+                        if (commaPos == -1) {
+                            System.out.println("  - ERROR: Cannot find property/value separator in: " + params);
+                            continue;
+                        }
+                        
+                        String propertyPart = params.substring(0, commaPos).trim();
+                        String valuePart = params.substring(commaPos + 1).trim();
+                        
+                        // Extract property name from quotes
+                        String property = removeQuotes(propertyPart);
+                        
+                        System.out.println("  - Changing property '" + property + "' of task " + id + " to: " + valuePart);
+                        
+                        try {
+                            // Try to parse as JSON first
+                            JsonElement jsonValue = JsonParser.parseString(valuePart);
+                            task.change(property, jsonValue);
+                            System.out.println("  - Applied JSON change to property: " + property);
+                        } catch (JsonSyntaxException e) {
+                            // If not valid JSON, use as string
+                            String stringValue = removeQuotes(valuePart);
+                            task.change(property, stringValue);
+                            System.out.println("  - Applied string change to property: " + property);
                         }
                     } else if (remainder.startsWith(".appendCommand(")) {
-                        int start = remainder.indexOf("(") + 1;
-                        int end = remainder.lastIndexOf(");");
-                        String param = remainder.substring(start, end);
+                        int methodOpenParen = remainder.indexOf("(");
+                        int methodCloseParen = findMatchingClosingParenthesis(remainder, methodOpenParen);
+                        
+                        if (methodCloseParen == -1) {
+                            System.out.println("  - ERROR: Cannot find matching closing parenthesis for appendCommand method in: " + remainder);
+                            continue;
+                        }
+                        
+                        String param = remainder.substring(methodOpenParen + 1, methodCloseParen);
                         String cmdToAppend = removeQuotes(param);
                         System.out.println("  - Appending command to task " + id + ": " + cmdToAppend);
                         task.appendCommand(cmdToAppend);
@@ -180,14 +205,26 @@ public class PlanEditor {
                     }
                 } else if (command.startsWith("removeTask(")) {
                     int openParen = command.indexOf("(");
-                    int closeParen = command.indexOf(")", openParen);
+                    int closeParen = findMatchingClosingParenthesis(command, openParen);
+                    
+                    if (closeParen == -1) {
+                        System.out.println("  - ERROR: Cannot find matching closing parenthesis in: " + command);
+                        continue;
+                    }
+                    
                     String idStr = command.substring(openParen + 1, closeParen).trim();
                     int id = Integer.parseInt(idStr);
                     System.out.println("  - Removing task " + id);
                     removeTask(id);
                 } else if (command.startsWith("addTask(")) {
                     int openParen = command.indexOf("(");
-                    int closeParen = command.lastIndexOf(");");
+                    int closeParen = findMatchingClosingParenthesis(command, openParen);
+                    
+                    if (closeParen == -1) {
+                        System.out.println("  - ERROR: Cannot find matching closing parenthesis in: " + command);
+                        continue;
+                    }
+                    
                     String jsonPart = command.substring(openParen + 1, closeParen).trim();
                     // Convert the JSON string to a JsonObject
                     JsonObject taskJson = JsonParser.parseString(jsonPart).getAsJsonObject();
@@ -199,12 +236,26 @@ public class PlanEditor {
                     addTask(newTask);
                 } else if (command.startsWith("updateTask(")) {
                     int openParen = command.indexOf("(");
-                    int comma = command.indexOf(",", openParen);
-                    String idStr = command.substring(openParen + 1, comma).trim();
+                    int closeParen = findMatchingClosingParenthesis(command, openParen);
+                    
+                    if (closeParen == -1) {
+                        System.out.println("  - ERROR: Cannot find matching closing parenthesis in: " + command);
+                        continue;
+                    }
+                    
+                    String params = command.substring(openParen + 1, closeParen).trim();
+                    
+                    // Find the comma that separates ID from JSON
+                    int commaPos = findFirstUnbalancedComma(params);
+                    if (commaPos == -1) {
+                        System.out.println("  - ERROR: Cannot find separator between ID and properties in: " + params);
+                        continue;
+                    }
+                    
+                    String idStr = params.substring(0, commaPos).trim();
+                    String jsonPart = params.substring(commaPos + 1).trim();
+                    
                     int id = Integer.parseInt(idStr);
-                    int jsonStart = command.indexOf("{", comma);
-                    int jsonEnd = command.lastIndexOf(");");
-                    String jsonPart = command.substring(jsonStart, jsonEnd).trim();
                     JsonObject updates = JsonParser.parseString(jsonPart).getAsJsonObject();
                     System.out.println("  - Updating task " + id + " with " + updates.keySet().size() + " properties");
                     updateTask(id, updates);
@@ -221,13 +272,108 @@ public class PlanEditor {
         
         System.out.println("Plan editing completed");
     }
+    
+    /**
+     * Find the matching closing parenthesis for an opening parenthesis at the given position.
+     * Handles nested parentheses correctly.
+     */
+    private int findMatchingClosingParenthesis(String text, int openPosition) {
+        int nestLevel = 0;
+        for (int i = openPosition; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '(') {
+                nestLevel++;
+            } else if (c == ')') {
+                nestLevel--;
+                if (nestLevel == 0) {
+                    return i;
+                }
+            }
+        }
+        return -1; // No matching closing parenthesis found
+    }
+    
+    /**
+     * Find the first comma that's not inside parentheses, brackets, or quotes.
+     * Used to find the separator between the property name and value in a change command.
+     */
+    private int findPropertyValueSeparator(String text) {
+        boolean inSingleQuote = false;
+        boolean inDoubleQuote = false;
+        int nestParenLevel = 0;
+        int nestBracketLevel = 0;
+        int nestBraceLevel = 0;
+        
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            
+            // Handle quotes (accounting for escapes)
+            if (c == '\'' && (i == 0 || text.charAt(i-1) != '\\')) {
+                inSingleQuote = !inSingleQuote;
+            } else if (c == '"' && (i == 0 || text.charAt(i-1) != '\\')) {
+                inDoubleQuote = !inDoubleQuote;
+            }
+            
+            // Only track nesting when not in quotes
+            if (!inSingleQuote && !inDoubleQuote) {
+                if (c == '(') nestParenLevel++;
+                else if (c == ')') nestParenLevel--;
+                else if (c == '[') nestBracketLevel++;
+                else if (c == ']') nestBracketLevel--;
+                else if (c == '{') nestBraceLevel++;
+                else if (c == '}') nestBraceLevel--;
+                
+                // Found an unbalanced comma
+                if (c == ',' && nestParenLevel == 0 && nestBracketLevel == 0 && nestBraceLevel == 0) {
+                    return i;
+                }
+            }
+        }
+        
+        return -1; // No property/value separator found
+    }
+    
+    /**
+     * Find the first comma that's not inside nested structures.
+     * Used for parsing updateTask parameters.
+     */
+    private int findFirstUnbalancedComma(String text) {
+        boolean inSingleQuote = false;
+        boolean inDoubleQuote = false;
+        int nestLevel = 0;
+        
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            
+            // Handle quotes (accounting for escapes)
+            if (c == '\'' && (i == 0 || text.charAt(i-1) != '\\')) {
+                inSingleQuote = !inSingleQuote;
+            } else if (c == '"' && (i == 0 || text.charAt(i-1) != '\\')) {
+                inDoubleQuote = !inDoubleQuote;
+            }
+            
+            // Only track nesting when not in quotes
+            if (!inSingleQuote && !inDoubleQuote) {
+                if (c == '(' || c == '[' || c == '{') nestLevel++;
+                else if (c == ')' || c == ']' || c == '}') nestLevel--;
+                
+                // Found an unbalanced comma
+                if (c == ',' && nestLevel == 0) {
+                    return i;
+                }
+            }
+        }
+        
+        return -1; // No unbalanced comma found
+    }
 
     /**
-     * Helper method to remove surrounding double quotes from a string.
+     * Helper method to remove surrounding quotes from a string.
      */
     private String removeQuotes(String s) {
         s = s.trim();
-        if (s.startsWith("\"") && s.endsWith("\"")) {
+        if ((s.startsWith("\"") && s.endsWith("\"")) || 
+            (s.startsWith("'") && s.endsWith("'"))) {
             s = s.substring(1, s.length() - 1);
         }
         return s;
@@ -248,6 +394,8 @@ public class PlanEditor {
          * Supported properties: description, successCriteria, commands, isAtomic, id.
          */
         public void change(String property, JsonElement value) {
+            property = property.trim();
+            
             if ("description".equals(property)) {
                 task.setDescription(value.getAsString());
             } else if ("successCriteria".equals(property)) {
@@ -274,6 +422,8 @@ public class PlanEditor {
          * Overloaded change method to update a property using a String value.
          */
         public void change(String property, String value) {
+            property = property.trim();
+            
             if ("description".equals(property)) {
                 task.setDescription(value);
             } else if ("successCriteria".equals(property)) {

@@ -35,6 +35,11 @@ function initializeApp() {
         fetchCurrentPlanId();
         fetchNewSystemLogs();
         fetchNewConversationLogs();
+        
+        // Also fetch fix logs if we have an active plan and the fix history panel is visible
+        if (currentPlanId && !fixesContent.classList.contains('hidden')) {
+            fetchFixLogs();
+        }
     }, 1000); // Poll every second
     
     // Set up button event listeners
@@ -356,6 +361,16 @@ function getTaskStatusClass(task) {
 }
 
 /**
+ * Force refresh the plan view to show latest changes
+ */
+function refreshPlanView() {
+    console.log("Forcing plan view refresh");
+    if (currentPlanId) {
+        fetchCurrentPlan();
+    }
+}
+
+/**
  * Fetch new system log entries since the last check
  */
 function fetchNewSystemLogs() {
@@ -375,6 +390,23 @@ function fetchNewSystemLogs() {
                 if (entries.some(entry => entry.message.includes('Plan execution completed successfully'))) {
                     isExecuting = false;
                     updateButtonState();
+                }
+                
+                // Check for plan updates
+                const planUpdateMessages = [
+                    'Applied plan fixes',
+                    'Plan updated in storage',
+                    'Updated plan:',
+                    'fixing commands from LLM',
+                    'command executed successfully',
+                    'Command executed successfully'
+                ];
+                
+                if (entries.some(entry => 
+                    planUpdateMessages.some(msg => entry.message.includes(msg))
+                )) {
+                    console.log("Plan modification detected, refreshing plan view");
+                    refreshPlanView();
                 }
             }
         })
@@ -510,45 +542,44 @@ function fetchFixLogs() {
     fetch(`/api/plan-fixes/${currentPlanId}`)
         .then(response => {
             if (!response.ok) {
-                // Fallback to general fix logs endpoint
-                return fetch('/api/logs/fixes')
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Failed to fetch fix logs');
-                        }
-                        return response.json();
-                    })
-                    .then(logs => ({ fixLogs: logs }));
+                // Fall back to general fixes endpoint
+                return fetch('/api/logs/fixes');
+            }
+            return response;
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch fix logs');
             }
             return response.json();
         })
-        .then(data => {
-            displayFixLogs(data.fixLogs || []);
+        .then(entries => {
+            displayFixLogs(entries);
         })
         .catch(error => {
             console.error('Error fetching fix logs:', error);
-            const fixLogs = fixesContent.querySelector('.fix-logs');
-            fixLogs.innerHTML = '<div class="error">Error fetching fix logs. Please try again.</div>';
+            fixesContent.innerHTML = '<div class="log-entry log-error">Error loading fix history</div>';
         });
 }
 
 /**
- * Display fix logs in the fix history panel
+ * Display the fix logs in the fix history panel
  */
-function displayFixLogs(logs) {
-    const fixLogs = fixesContent.querySelector('.fix-logs');
+function displayFixLogs(entries) {
+    fixesContent.innerHTML = '';
     
-    if (logs.length === 0) {
-        fixLogs.innerHTML = '<div class="placeholder">No fix history available for this plan.</div>';
+    if (!entries || entries.length === 0) {
+        fixesContent.innerHTML = '<div class="log-entry">No fix history available</div>';
         return;
     }
     
-    fixLogs.innerHTML = '';
-    
-    logs.forEach(log => {
+    entries.forEach(entry => {
         const logEntry = document.createElement('div');
-        logEntry.className = `fix-log-entry ${getLogEntryClass(log)}`;
-        logEntry.textContent = formatLogEntry(log);
-        fixLogs.appendChild(logEntry);
+        logEntry.className = `log-entry ${getLogEntryClass(entry)}`;
+        logEntry.textContent = formatLogEntry(entry);
+        fixesContent.appendChild(logEntry);
     });
-} 
+    
+    // Scroll to bottom
+    fixesContent.scrollTop = fixesContent.scrollHeight;
+}
